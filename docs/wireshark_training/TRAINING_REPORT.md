@@ -3,17 +3,17 @@
 **Dataset Location:** `wireshark_dataset`  
 **Training Script:** [`train_from_wireshark.py`](file:///c:/Users/ADRIN/Downloads/anomaly-detection_v2/anomaly-detection_v2/project/backend/train_from_wireshark.py)  
 **Completion Status:** ✅ **SUCCESS**  
-**Execution Time:** $461.0\,\text{seconds}$ ($\sim 7.68\,\text{minutes}$)  
+**Execution Time:** $855.4\,\text{seconds}$ ($\sim 14.26\,\text{minutes}$)  
 
 ---
 
 ## 1. Data Ingestion & Feature Metrics
 
-- **Total PCAPNG Files Processed:** 2 (`capture.pcapng`, `packets.pcapng`)
-- **Total Packets Ingested:** $1,627,485\,\text{packets}$
-- **Total 30-Second Windows:** $325$ windows
-- **Total Flow Features Generated:** $36,466$ flows
-- **Training Samples:** $36,466$ benign local flow vectors ($100\%$ local network baseline)
+- **Total PCAPNG Files Processed:** 5 (`capture.pcapng`, `capture1.pcapng`, `normal_data.pcapng`, `normal_data1.pcapng`, `packets.pcapng`)
+- **Total Packets Ingested:** $3,282,610\,\text{packets}$
+- **Total 30-Second Windows:** $414$ windows
+- **Total Flow Features Generated:** $39,568$ flows
+- **Training Samples:** $39,568$ benign local flow vectors ($100\%$ local network baseline)
 - **Validation Samples:** Holdout quantile evaluation (50th & 99th percentiles of local benign flows used for score calibration anchors)
 
 ---
@@ -42,8 +42,8 @@
 
 | Detector Head | Low Anchor (`lo` $\to 0.0$) | Mid Anchor (`mid` $\to 0.5$) | High Anchor (`hi` $\to 1.0$) | Calibration Strategy |
 | :--- | :--- | :--- | :--- | :--- |
-| **Isolation Forest (`if`)** | $0.443024$ | $0.679826$ | $0.916629$ | Benign quantile ($50\%, 99\%$) + extrapolation |
-| **Autoencoder (`ae`)** | $0.090181$ | $1.293566$ | $2.496951$ | Benign quantile ($50\%, 99\%$) + extrapolation |
+| **Isolation Forest (`if`)** | $0.440137$ | $0.662847$ | $0.885558$ | Benign quantile ($50\%, 99\%$) + extrapolation |
+| **Autoencoder (`ae`)** | $0.097066$ | $1.290550$ | $2.484034$ | Benign quantile ($50\%, 99\%$) + extrapolation |
 
 ---
 

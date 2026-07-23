@@ -1,10 +1,10 @@
 {
   "dataset_source": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\wireshark_dataset",
-  "number_of_pcapng_files_processed": 2,
-  "total_packets_processed": 1627485,
-  "total_30s_windows": 325,
-  "total_flows_generated": 36466,
-  "training_execution_time_seconds": 471.97,
+  "number_of_pcapng_files_processed": 5,
+  "total_packets_processed": 3282610,
+  "total_30s_windows": 414,
+  "total_flows_generated": 39568,
+  "training_execution_time_seconds": 818.37,
   "model_parameters": {
     "isolation_forest": {
       "n_estimators": 100,
@@ -21,17 +21,17 @@
   },
   "score_calibration_anchors": {
     "if": {
-      "lo": 0.443024,
-      "mid": 0.679826,
-      "hi": 0.916629
+      "lo": 0.440137,
+      "mid": 0.662847,
+      "hi": 0.885558
     },
     "ae": {
-      "lo": 0.090181,
-      "mid": 1.293566,
-      "hi": 2.496951
+      "lo": 0.097066,
+      "mid": 1.29055,
+      "hi": 2.484034
     }
   },
-  "backup_directory": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\project\\models_backup_20260723_120510",
+  "backup_directory": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\project\\models_backup_20260723_122543",
   "saved_model_locations": {
     "scaler.pkl": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\project\\models\\scaler.pkl",
     "isolation_forest.pkl": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\project\\models\\isolation_forest.pkl",
