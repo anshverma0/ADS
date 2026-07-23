@@ -1,19 +1,19 @@
 # Wireshark Direct Training Report
 
-**Dataset Location:** `wireshark_dataset/training_wireshark`  
-**Training Script:** [`train_from_wireshark.py`](file:///d:/Projects/anomaly-detection/project/backend/train_from_wireshark.py)  
+**Dataset Location:** `wireshark_dataset`  
+**Training Script:** [`train_from_wireshark.py`](file:///c:/Users/ADRIN/Downloads/anomaly-detection_v2/anomaly-detection_v2/project/backend/train_from_wireshark.py)  
 **Completion Status:** ✅ **SUCCESS**  
-**Execution Time:** $972.98\,\text{seconds}$ ($\sim 16.22\,\text{minutes}$)  
+**Execution Time:** $461.0\,\text{seconds}$ ($\sim 7.68\,\text{minutes}$)  
 
 ---
 
 ## 1. Data Ingestion & Feature Metrics
 
-- **Total PCAPNG Files Processed:** 3 (`capture1.pcapng`, `capture2.pcapng`, `capture3.pcapng`)
-- **Total Packets Ingested:** $4,749,832\,\text{packets}$
-- **Total 30-Second Windows:** $407$ windows
-- **Total Flow Features Generated:** $8,782$ flows
-- **Training Samples:** $8,782$ benign local flow vectors ($100\%$ local network baseline)
+- **Total PCAPNG Files Processed:** 2 (`capture.pcapng`, `packets.pcapng`)
+- **Total Packets Ingested:** $1,627,485\,\text{packets}$
+- **Total 30-Second Windows:** $325$ windows
+- **Total Flow Features Generated:** $36,466$ flows
+- **Training Samples:** $36,466$ benign local flow vectors ($100\%$ local network baseline)
 - **Validation Samples:** Holdout quantile evaluation (50th & 99th percentiles of local benign flows used for score calibration anchors)
 
 ---
@@ -42,20 +42,19 @@
 
 | Detector Head | Low Anchor (`lo` $\to 0.0$) | Mid Anchor (`mid` $\to 0.5$) | High Anchor (`hi` $\to 1.0$) | Calibration Strategy |
 | :--- | :--- | :--- | :--- | :--- |
-| **Isolation Forest (`if`)** | $0.428146$ | $0.644107$ | $0.860068$ | Benign quantile ($50\%, 99\%$) + extrapolation |
-| **Autoencoder (`ae`)** | $0.083929$ | $1.144481$ | $2.205034$ | Benign quantile ($50\%, 99\%$) + extrapolation |
+| **Isolation Forest (`if`)** | $0.443024$ | $0.679826$ | $0.916629$ | Benign quantile ($50\%, 99\%$) + extrapolation |
+| **Autoencoder (`ae`)** | $0.090181$ | $1.293566$ | $2.496951$ | Benign quantile ($50\%, 99\%$) + extrapolation |
 
 ---
 
 ## 4. Saved Artifact Locations & Backup
 
-- **Backup Location:** [`project/models_backup_20260720_232343`](file:///d:/Projects/anomaly-detection/project/models_backup_20260720_232343)
 - **Saved Model Files:**
-  - `scaler.pkl`: [`project/models/scaler.pkl`](file:///d:/Projects/anomaly-detection/project/models/scaler.pkl)
-  - `isolation_forest.pkl`: [`project/models/isolation_forest.pkl`](file:///d:/Projects/anomaly-detection/project/models/isolation_forest.pkl)
-  - `autoencoder.pkl`: [`project/models/autoencoder.pkl`](file:///d:/Projects/anomaly-detection/project/models/autoencoder.pkl)
-  - `meta.pkl`: [`project/models/meta.pkl`](file:///d:/Projects/anomaly-detection/project/models/meta.pkl)
-- **Training Metrics Report JSON:** [`project/models/wireshark_training_report.json`](file:///d:/Projects/anomaly-detection/project/models/wireshark_training_report.json)
+  - `scaler.pkl`: [`project/models/scaler.pkl`](file:///c:/Users/ADRIN/Downloads/anomaly-detection_v2/anomaly-detection_v2/project/models/scaler.pkl)
+  - `isolation_forest.pkl`: [`project/models/isolation_forest.pkl`](file:///c:/Users/ADRIN/Downloads/anomaly-detection_v2/anomaly-detection_v2/project/models/isolation_forest.pkl)
+  - `autoencoder.pkl`: [`project/models/autoencoder.pkl`](file:///c:/Users/ADRIN/Downloads/anomaly-detection_v2/anomaly-detection_v2/project/models/autoencoder.pkl)
+  - `meta.pkl`: [`project/models/meta.pkl`](file:///c:/Users/ADRIN/Downloads/anomaly-detection_v2/anomaly-detection_v2/project/models/meta.pkl)
+- **Training Metrics Report JSON:** [`project/models/wireshark_training_report.json`](file:///c:/Users/ADRIN/Downloads/anomaly-detection_v2/anomaly-detection_v2/project/models/wireshark_training_report.json)
 
 ---
 

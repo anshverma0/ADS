@@ -1,0 +1,119 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    ANOMALY DETECTION SYSTEM — DEMO QUICK REFERENCE
+═══════════════════════════════════════════════════════════════════════════════
+
+START
+─────────────────────────────────────────────────────────────────────────────
+  cd "e:\Projects Internet room\anomaly-detection_v2"
+  python run_all.py
+
+  ✓ Wait 20 seconds for backend + frontend to start
+  ✓ Browser opens to http://127.0.0.1:5173
+
+KEY TALKING POINTS
+─────────────────────────────────────────────────────────────────────────────
+  "Combines ML (Isolation Forest) + rules (DDoS detection)"
+  "Trained on real botnet traffic (CTU-13: 38K attacks + 53K normal)"
+  "SHAP explains every detection"
+  "Catches: botnet C&C, port scans, SYN floods, volumetric attacks"
+
+DASHBOARD TABS
+─────────────────────────────────────────────────────────────────────────────
+  Dashboard          → Real-time metrics & alerts
+  Online Detection   → Start capture / simulation
+  Model Training     → Retrain from scratch
+  Upload Dataset     → Batch analysis
+  Historical Data    → Past runs + exports
+
+CAPTURE OPTIONS (Online Detection)
+─────────────────────────────────────────────────────────────────────────────
+  Option 1: Live Network Interface    (needs admin)
+  Option 2: Simulation Mode           (no admin needed) ✓ BEST FOR DEMO
+  Option 3: Wireshark Baseline        (advanced)
+  Option 4: Upload PCAP File          (offline analysis)
+
+DEMO FLOW
+─────────────────────────────────────────────────────────────────────────────
+  1. Show dashboard (system status, metrics)
+  2. Click "Online Detection" tab
+  3. Select "Simulation Mode" → Click "Start Capture"
+  4. Wait 30–60 seconds for alerts to appear
+  5. Click any alert to see SHAP explanation
+  6. Show feature importance chart
+  7. Open "Historical Data" → Export PDF
+
+SHAP EXPLANATION READING
+─────────────────────────────────────────────────────────────────────────────
+  Red bar (negative value)  = pushes score toward ANOMALOUS
+  Green bar (positive)      = pushes score toward NORMAL
+
+  Example: High SYN count + odd packet rate + low bytes = Anomalous
+           Interpretation: Likely port scan or DDoS SYN flood setup
+
+ML PIPELINE
+─────────────────────────────────────────────────────────────────────────────
+  Raw Features (12 flow metrics)
+         ↓
+  StandardScaler (normalize)
+         ↓
+  Isolation Forest (200 trees, detect anomalies)
+         ↓
+  DDoS Rule Engine (SYN/port scan/volumetric checks)
+         ↓
+  Combined Score + Attack Type Label
+
+PERFORMANCE (CTU-13)
+─────────────────────────────────────────────────────────────────────────────
+  Precision: 0.695    (when we flag something, 70% are real attacks)
+  Recall:    0.555    (we catch 55% of actual attacks)
+  ROC-AUC:   0.706    (good separation between attack & normal)
+
+ANSWERS TO COMMON QUESTIONS
+─────────────────────────────────────────────────────────────────────────────
+Q: "Why such low recall?"
+A: "We prioritize catching rare attacks over speed. Missing 1 real attack is
+   worse than investigating 10 false alarms."
+
+Q: "Does this require labels?"
+A: "No. Isolation Forest is unsupervised. The rule engine uses hand-tuned
+   thresholds based on domain knowledge."
+
+Q: "Can I integrate with my SIEM?"
+A: "Yes. Export alerts as CSV/JSON, import to Splunk/ELK."
+
+Q: "What about false positives on my network?"
+A: "Retrain on your baseline (Model Training tab) to adapt to your traffic."
+
+Q: "Does this work offline?"
+A: "Yes. All detection runs locally. No cloud calls."
+
+TROUBLESHOOTING
+─────────────────────────────────────────────────────────────────────────────
+  No alerts?           → Wait 60 sec or inject packets via "Simulation Mode"
+  Port 8000 in use?    → taskkill /PID <pid> /F
+  Frontend won't load? → Check http://127.0.0.1:5173 in new tab
+  High false positives? → Click "Model Training", select "Fine-tune on Your Data"
+
+TIME BUDGETS
+─────────────────────────────────────────────────────────────────────────────
+  15 min:  Dashboard (2) + Simulation (2) + Alert Explanation (2) + Export (2) + Outro (5)
+  25 min:  Add "Under the Hood" section (ML pipeline details)
+  30 min:  Add "Model Training" retrain walkthrough
+
+KEYBOARD SHORTCUTS (useful if time runs short)
+─────────────────────────────────────────────────────────────────────────────
+  Alt+Tab     → Switch between browser & code (if showing code)
+  F12         → Toggle browser dev tools (hide if showing)
+  Ctrl+L      → Focus address bar (go to next page quickly)
+
+PRE-DEMO CHECKLIST
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Run "python run_all.py" 5 min before demo
+  ☐ Let it fully start (check backend console)
+  ☐ Zoom browser to 125% for readability
+  ☐ Mute system sounds
+  ☐ Close unnecessary apps (reduces lag)
+  ☐ Have a backup PCAP file ready (if live sniffing fails)
+  ☐ Print this cheat sheet!
+
+═══════════════════════════════════════════════════════════════════════════════

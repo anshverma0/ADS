@@ -1,10 +1,10 @@
 {
-  "dataset_source": "d:\\Projects\\anomaly-detection\\wireshark_dataset\\training_wireshark",
-  "number_of_pcapng_files_processed": 3,
-  "total_packets_processed": 4749832,
-  "total_30s_windows": 407,
-  "total_flows_generated": 8782,
-  "training_execution_time_seconds": 972.98,
+  "dataset_source": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\wireshark_dataset",
+  "number_of_pcapng_files_processed": 2,
+  "total_packets_processed": 1627485,
+  "total_30s_windows": 325,
+  "total_flows_generated": 36466,
+  "training_execution_time_seconds": 471.97,
   "model_parameters": {
     "isolation_forest": {
       "n_estimators": 100,
@@ -21,22 +21,22 @@
   },
   "score_calibration_anchors": {
     "if": {
-      "lo": 0.428146,
-      "mid": 0.644107,
-      "hi": 0.860068
+      "lo": 0.443024,
+      "mid": 0.679826,
+      "hi": 0.916629
     },
     "ae": {
-      "lo": 0.083929,
-      "mid": 1.144481,
-      "hi": 2.205034
+      "lo": 0.090181,
+      "mid": 1.293566,
+      "hi": 2.496951
     }
   },
-  "backup_directory": "d:\\Projects\\anomaly-detection\\project\\models_backup_20260720_232343",
+  "backup_directory": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\project\\models_backup_20260723_120510",
   "saved_model_locations": {
-    "scaler.pkl": "d:\\Projects\\anomaly-detection\\project\\models\\scaler.pkl",
-    "isolation_forest.pkl": "d:\\Projects\\anomaly-detection\\project\\models\\isolation_forest.pkl",
-    "autoencoder.pkl": "d:\\Projects\\anomaly-detection\\project\\models\\autoencoder.pkl",
-    "meta.pkl": "d:\\Projects\\anomaly-detection\\project\\models\\meta.pkl"
+    "scaler.pkl": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\project\\models\\scaler.pkl",
+    "isolation_forest.pkl": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\project\\models\\isolation_forest.pkl",
+    "autoencoder.pkl": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\project\\models\\autoencoder.pkl",
+    "meta.pkl": "C:\\Users\\ADRIN\\Downloads\\anomaly-detection_v2\\anomaly-detection_v2\\project\\models\\meta.pkl"
   },
   "feature_names": [
     "flow_byts_s",
