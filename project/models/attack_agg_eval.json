@@ -1,0 +1,92 @@
+{
+  "pcap": "attack_recap.pcapng",
+  "mode": "aggregate-model",
+  "victim": "192.168.1.123",
+  "window_sec": 5,
+  "threshold": 0.5839145946678841,
+  "records": 87,
+  "attack": 13,
+  "benign": 74,
+  "stage1": {
+    "ml": {
+      "accuracy": 0.9425287356321839,
+      "balanced_accuracy": 0.8711018711018712,
+      "precision": 0.8333333333333334,
+      "recall": 0.7692307692307693,
+      "f1": 0.8,
+      "tp": 10,
+      "fp": 2,
+      "tn": 72,
+      "fn": 3,
+      "false_positive_rate": 0.02702702702702703,
+      "roc_auc": 0.9812889812889813
+    },
+    "rule": {
+      "accuracy": 0.8160919540229885,
+      "balanced_accuracy": 0.5748440748440748,
+      "precision": 0.3333333333333333,
+      "recall": 0.23076923076923078,
+      "f1": 0.2727272727272727,
+      "tp": 3,
+      "fp": 6,
+      "tn": 68,
+      "fn": 10,
+      "false_positive_rate": 0.08108108108108109
+    },
+    "hybrid": {
+      "accuracy": 0.9080459770114943,
+      "balanced_accuracy": 0.9459459459459459,
+      "precision": 0.6190476190476191,
+      "recall": 1.0,
+      "f1": 0.7647058823529411,
+      "tp": 13,
+      "fp": 8,
+      "tn": 66,
+      "fn": 0,
+      "false_positive_rate": 0.10810810810810811
+    }
+  },
+  "per_attack_type": {
+    "ACK": {
+      "records": 3,
+      "detected": 3,
+      "detection_rate": 1.0,
+      "dominant_verdict": "Unknown Anomaly",
+      "verdict_breakdown": {
+        "Unknown Anomaly": 3
+      },
+      "mean_unique_peers": 1105.6666666666667
+    },
+    "HTTP": {
+      "records": 3,
+      "detected": 3,
+      "detection_rate": 1.0,
+      "dominant_verdict": "Unknown Anomaly",
+      "verdict_breakdown": {
+        "Unknown Anomaly": 3
+      },
+      "mean_unique_peers": 1046.3333333333333
+    },
+    "SYN": {
+      "records": 4,
+      "detected": 4,
+      "detection_rate": 1.0,
+      "dominant_verdict": "Unknown Anomaly",
+      "verdict_breakdown": {
+        "Unknown Anomaly": 4
+      },
+      "mean_unique_peers": 831.0
+    },
+    "UDP": {
+      "records": 3,
+      "detected": 3,
+      "detection_rate": 1.0,
+      "dominant_verdict": "UDP Flood",
+      "verdict_breakdown": {
+        "UDP Flood": 3
+      },
+      "mean_unique_peers": 1043.0
+    }
+  },
+  "benign_mean_unique_peers": 44.16216216216216
+}

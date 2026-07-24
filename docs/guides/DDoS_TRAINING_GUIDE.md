@@ -32,17 +32,17 @@ Complete workflow to generate realistic DDoS attack data for model training.
 **For 1-hour training (quick test):**
 ```bash
 cd "e:\Projects Internet room\anomaly-detection_v2\project\backend"
-python ddos_attack_simulator.py --target 192.168.1.10 --duration 1 --intensity variable
+python tools/ddos_attack_simulator.py --target 192.168.1.10 --duration 1 --intensity variable
 ```
 
 **For 4-hour training (comprehensive):**
 ```bash
-python ddos_attack_simulator.py --target 192.168.1.10 --duration 4 --intensity variable
+python tools/ddos_attack_simulator.py --target 192.168.1.10 --duration 4 --intensity variable
 ```
 
 **For heavy stress testing:**
 ```bash
-python ddos_attack_simulator.py --target 192.168.1.10 --duration 2 --intensity heavy
+python tools/ddos_attack_simulator.py --target 192.168.1.10 --duration 2 --intensity heavy
 ```
 
 ### Parameters
@@ -157,7 +157,7 @@ This will:
 
 ```bash
 # Step 1: Generate 4 hours of attacks (takes 4 hours real-time)
-python ddos_attack_simulator.py --target 192.168.1.10 --duration 4 --intensity variable
+python tools/ddos_attack_simulator.py --target 192.168.1.10 --duration 4 --intensity variable
 
 # ✓ Produces: ddos_training_log_20250721_143022.csv
 
@@ -288,10 +288,10 @@ python -m uvicorn main:app --reload --port 8000
 
 ```bash
 # Session 1: 1 hour
-python ddos_attack_simulator.py --target 192.168.1.10 --duration 1
+python tools/ddos_attack_simulator.py --target 192.168.1.10 --duration 1
 
 # Session 2: 1 hour (different patterns)
-python ddos_attack_simulator.py --target 192.168.1.10 --duration 1
+python tools/ddos_attack_simulator.py --target 192.168.1.10 --duration 1
 
 # Merge logs
 cat ddos_training_log_*.csv > combined_attacks.csv
@@ -312,7 +312,7 @@ attack_types = [
 ]
 
 # Run with variable intensity
-python ddos_attack_simulator.py --target 192.168.1.10 --duration 2 --intensity variable
+python tools/ddos_attack_simulator.py --target 192.168.1.10 --duration 2 --intensity variable
 ```
 
 ### Adjust Packet Rates
