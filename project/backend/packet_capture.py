@@ -427,7 +427,7 @@ class PacketCaptureManager:
 
         det = aggregate_detector.score_records(scoped)
         scoped["ml_anom"] = det["is_anomaly"]
-        scoped["score"] = det["score"]
+        scoped["ml_conf"] = det["confidence"]
 
         # Group flagged sub-windows by (victim, protocol); confirm only those
         # seen in >= AGG_CONFIRM_WINDOWS sub-windows.
@@ -440,12 +440,13 @@ class PacketCaptureManager:
                 continue
             key = (rec["victim_ip"], rec["protocol"])
             g = groups.setdefault(key, {"windows": 0, "peers": 0, "pkts": 0,
-                                        "verdicts": {}, "best_conf": 0.0,
-                                        "dst_port": rec.get("dst_port", 0)})
+                                        "verdicts": {}, "rule_conf": 0.0, "ml_conf": 0.0})
             g["windows"] += 1
             g["peers"] = max(g["peers"], int(rec.get("unique_peers", 0)))
             g["pkts"] += int(rec.get("total_pkts", 0))
-            g["best_conf"] = max(g["best_conf"], float(verdict["confidence"]))
+            g["ml_conf"] = max(g["ml_conf"], float(rec.get("ml_conf", 0.0)))
+            if rule_anom:
+                g["rule_conf"] = max(g["rule_conf"], float(verdict["confidence"]))
             name = (verdict["attack_type"] if rule_anom else "Volumetric Flood")
             g["verdicts"][name] = g["verdicts"].get(name, 0) + 1
 
@@ -455,17 +456,24 @@ class PacketCaptureManager:
                 continue
             attack_type = max(g["verdicts"].items(), key=lambda kv: kv[1])[0]
             severity = "Critical" if (g["peers"] > 200 or g["pkts"] > 2000) else "High"
+            # Confidence reflects the strongest signal: the rule verdict, the ML
+            # anomaly strength, and how far the source count exceeds the floor.
+            # A flood with hundreds-plus distinct sources is near-certain, so the
+            # source factor alone floors confidence high regardless of which head
+            # fired (avoids a 1109-source flood reading as 40%).
+            source_conf = min(0.99, 0.6 + 0.39 * min(1.0, g["peers"] / 500.0))
+            confidence = min(0.99, max(g["rule_conf"], g["ml_conf"], source_conf))
             campaigns.append({
                 "id": f"agg-{victim}-{proto}",
                 "src_ip": f"{g['peers']} sources",
                 "dst_ip": victim,
-                "dst_port": int(g["dst_port"]),
+                "dst_port": 0,   # victim_proto aggregates all ports; 0 = "any"
                 "attack_type": attack_type,
                 "severity": severity,
                 "total_pkts": g["pkts"],
                 "num_sources": g["peers"],
                 "windows_flagged": g["windows"],
-                "confidence": round(g["best_conf"], 2),
+                "confidence": round(confidence, 2),
                 "detector": "volumetric-aggregate",
             })
         if campaigns:
