@@ -107,11 +107,18 @@ def _packet_meta(pkt):
         return None
     ip = pkt["IP"]
 
-    if pkt.haslayer("TCP"):
-        proto, l4 = "TCP", pkt["TCP"]
-    elif pkt.haslayer("UDP"):
-        proto, l4 = "UDP", pkt["UDP"]
-    elif pkt.haslayer("ICMP"):
+    # Classify by the IP header's protocol number, NOT haslayer(). An ICMP
+    # port-unreachable reply quotes the original packet's UDP/TCP header inside
+    # its payload; with scapy layer-filtering active, haslayer("UDP") matches
+    # that QUOTED header and misclassifies the ICMP reply as UDP - which flips a
+    # one-way flood's direction ratio and hides it from the flood rules. The IP
+    # proto field is the true top-layer protocol and is filter-proof.
+    proto_num = int(ip.proto)
+    if proto_num == 6:
+        proto, l4 = "TCP", (pkt["TCP"] if pkt.haslayer("TCP") else None)
+    elif proto_num == 17:
+        proto, l4 = "UDP", (pkt["UDP"] if pkt.haslayer("UDP") else None)
+    elif proto_num == 1:
         proto, l4 = "ICMP", None
     else:
         proto, l4 = "Other", None

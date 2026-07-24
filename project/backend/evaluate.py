@@ -58,6 +58,8 @@ import feature_extractor
 import preprocessing
 import anomaly_detector
 import ddos_classifier
+import flow_aggregator
+import aggregate_detector
 
 THRESHOLD = 0.5
 RULE_MIN_CONF = 0.4          # packet_capture.py:476
@@ -77,6 +79,10 @@ EXPECTED_FAMILY = {
     "PULSE": None, "FRAG": None,
 }
 PROTO_NUM = {"TCP": 6, "UDP": 17, "ICMP": 1}
+# Wire protocol each simulated attack rides on - used to label aggregate records
+# without counting benign cross-protocol traffic inside an attack window.
+ATTACK_PROTOCOL = {"SYN": "TCP", "ACK": "TCP", "HTTP": "TCP", "XMAS": "TCP",
+                   "NULL": "TCP", "UDP": "UDP", "ICMP": "ICMP"}
 
 
 # ─────────────────────────── ground truth ───────────────────────────
@@ -706,6 +712,146 @@ def cmd_main_dataset(args):
     _write(report, os.path.join(MODELS_DIR, "main_dataset_eval.json"))
 
 
+# ─────────────────────────── subcommand: agg (trained aggregate model) ─────────
+
+def build_agg_records(pcap, victim, window_sec, t_lo, t_hi):
+    """
+    Streams the capture within [t_lo, t_hi] into flow_aggregator records (both
+    scopes), bucketed by window so each flush sees one window's packets.
+    """
+    from scapy.all import PcapReader
+
+    buckets, max_win, frames, n_read, n_kept = {}, None, [], 0, 0
+    t0 = time.time()
+
+    def flush(pkts):
+        d = flow_aggregator.aggregate_packets(pkts, window_sec=window_sec,
+                                              victim_ips=[victim])
+        if not d.empty:
+            frames.append(d)
+
+    reader = PcapReader(pcap)
+    try:
+        for pkt in reader:
+            n_read += 1
+            ts = float(pkt.time)
+            if ts > t_hi:
+                break
+            if ts < t_lo:
+                continue
+            n_kept += 1
+            wid = int(ts // window_sec)
+            buckets.setdefault(wid, []).append(pkt)
+            if max_win is None or wid > max_win:
+                max_win = wid
+                for old in [w for w in buckets if w < max_win - 1]:
+                    flush(buckets.pop(old))
+    except (EOFError, StopIteration):
+        pass
+    finally:
+        try:
+            reader.close()
+        except Exception:
+            pass
+    for w in sorted(buckets):
+        flush(buckets.pop(w))
+
+    df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    print(f"[+] {n_read:,} read / {n_kept:,} in range -> {len(df):,} aggregate "
+          f"records ({time.time() - t0:.0f}s)")
+    return df
+
+
+def cmd_agg(args):
+    if not aggregate_detector.is_available():
+        sys.exit("[-] Aggregate model not trained. Run train_aggregate.py first.")
+    restrict_dissection()
+    segments = load_segments(args.timeline_dir)
+    if not segments:
+        print("[-] No attack_timeline_*.csv found."); sys.exit(1)
+    win = args.window_sec
+    t_lo = min(s["start"] for s in segments) - PAD_SEC
+    t_hi = max(s["end"] for s in segments) + PAD_SEC
+    print(f"[+] {len(segments)} segments; victim {args.victim}; {win}s windows")
+
+    df = build_agg_records(args.pcap, args.victim, win, t_lo, t_hi)
+    if df.empty:
+        sys.exit("[-] No aggregate records produced.")
+
+    # Trained anomaly model scores the cardinality-bearing scope.
+    det = aggregate_detector.score_records(df)
+    df = df.assign(score=det["score"], ml_anom=det["is_anomaly"],
+                   ml_conf=det["confidence"])
+
+    # Stage 2 rule verdict per record (uses aggregate rates/flags/ports).
+    verdicts, rule_hit = [], []
+    for rec in df.to_dict("records"):
+        v = ddos_classifier.classify_flow(rec)
+        verdicts.append(v["attack_type"])
+        rule_hit.append(v["attack_type"] not in ("Normal", "Unknown Anomaly")
+                        and v["confidence"] >= RULE_MIN_CONF)
+    df["verdict"] = verdicts
+    df["rule_anom"] = rule_hit
+
+    # Grade the cardinality scope (one row per window/protocol) - that is the
+    # detection unit. Label each record by timeline overlap for its victim, but
+    # PROTOCOL-AWARE: a TCP-based flood (SYN/ACK/HTTP) does not make the victim's
+    # background UDP traffic in that same window an attack, and vice-versa.
+    # Without this, benign cross-protocol records inside an attack window count
+    # as missed detections and deflate recall.
+    scoped = df[df["scope"] == "victim_proto"].copy()
+    lab = [label_window(r.t_start, r.t_end, segments, args.victim)
+           for r in scoped.itertuples()]
+    protos = scoped["protocol"].values
+    y_true = np.zeros(len(scoped), dtype=int)
+    atk = np.array(["Benign"] * len(scoped), dtype=object)
+    for i, (is_atk, atype) in enumerate(lab):
+        if not is_atk:
+            continue
+        exp_proto = ATTACK_PROTOCOL.get(atype)
+        if exp_proto is None or protos[i] == exp_proto:
+            y_true[i] = 1
+            atk[i] = atype
+    ml = scoped["ml_anom"].astype(int).values
+    rule = scoped["rule_anom"].astype(int).values
+    hyb = (ml | rule)
+
+    print("\n" + "=" * 78)
+    print(f"  AGGREGATE MODEL  ({len(scoped):,} victim_proto records: "
+          f"{int(y_true.sum())} attack / {int((y_true == 0).sum())} benign)")
+    print("=" * 78 + "\n")
+    stage1 = print_stage1(y_true, {"ml": ml, "rule": rule, "hybrid": hyb},
+                          {"ml": scoped["score"].values})
+
+    # Per attack type (hybrid)
+    print(f"\n  {'attack':<8} {'recs':>6} {'det':>5} {'rate':>7}  "
+          f"{'dominant verdict':<28} {'mean peers':>10}")
+    per = {}
+    for t in sorted(set(atk) - {"Benign"}):
+        m = atk == t
+        d = m & (hyb == 1)
+        vs = pd.Series(scoped["verdict"].values[d])
+        per[t] = {"records": int(m.sum()), "detected": int(d.sum()),
+                  "detection_rate": float(d.sum() / m.sum()) if m.sum() else 0.0,
+                  "dominant_verdict": str(vs.value_counts().idxmax()) if d.sum() else "-",
+                  "verdict_breakdown": vs.value_counts().to_dict(),
+                  "mean_unique_peers": float(scoped["unique_peers"].values[m].mean())}
+        print(f"  {t:<8} {per[t]['records']:>6} {per[t]['detected']:>5} "
+              f"{per[t]['detection_rate']:>7.3f}  {per[t]['dominant_verdict']:<28} "
+              f"{per[t]['mean_unique_peers']:>10.1f}")
+    benign_peers = float(scoped["unique_peers"].values[atk == "Benign"].mean()) \
+        if (atk == "Benign").any() else 0.0
+    print(f"  benign mean unique peers/record: {benign_peers:.1f}")
+
+    report = {"pcap": os.path.basename(args.pcap), "mode": "aggregate-model",
+              "victim": args.victim, "window_sec": win,
+              "threshold": aggregate_detector._load()["meta"]["threshold"],
+              "records": int(len(scoped)), "attack": int(y_true.sum()),
+              "benign": int((y_true == 0).sum()), "stage1": stage1,
+              "per_attack_type": per, "benign_mean_unique_peers": benign_peers}
+    _write(report, args.out)
+
+
 # ─────────────────────────── cli ───────────────────────────
 
 def _write(report, out_path):
@@ -750,6 +896,14 @@ def main():
     p = sub.add_parser("main-dataset", help="join + evaluate CICDDoS2019 parquets")
     p.add_argument("--threshold", type=float, default=THRESHOLD)
     p.set_defaults(func=cmd_main_dataset)
+
+    p = sub.add_parser("agg", help="evaluate the trained aggregate DDoS model")
+    p.add_argument("--pcap", required=True)
+    p.add_argument("--victim", default="192.168.1.123")
+    p.add_argument("--timeline-dir", default=TIMELINE_DIR)
+    p.add_argument("--window-sec", type=int, default=5)
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_agg)
 
     args = ap.parse_args()
     args.func(args)

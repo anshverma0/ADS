@@ -16,6 +16,22 @@ import anomaly_detector
 import ddos_classifier
 import shap_explainer
 import database
+import flow_aggregator
+import aggregate_detector
+
+# Sub-window size the aggregate volumetric model was trained on. The live
+# sliding window (30s) is diced into these before aggregation so the model's
+# rate/cardinality features keep their trained meaning.
+AGG_SUBWINDOW_SEC = 5
+# A (victim, protocol) must flag in at least this many sub-windows before a
+# volumetric alert is raised - suppresses single-window benign spikes.
+AGG_CONFIRM_WINDOWS = 2
+# A confirmed volumetric campaign must peak at this many distinct sources. A
+# distributed flood is many-source by definition; measured on this network,
+# benign windows top out near 40 sources while the floods carry 800-1100, so a
+# floor here removes benign false alarms without missing real attacks. (Single-
+# source high-volume floods are still caught by the per-flow pipeline.)
+AGG_MIN_SOURCES = 100
 
 def resolve_interface_name(target_iface: Optional[str]) -> Optional[str]:
     if not target_iface:
@@ -381,6 +397,82 @@ class PacketCaptureManager:
                 import traceback
                 traceback.print_exc()
 
+    def _detect_volumetric_ddos(self, active_packets):
+        """
+        Volumetric-DDoS track: aggregates the live window into 5s (victim,
+        protocol) records and scores them with the benign-trained aggregate
+        model (ML) plus the Stage 2 rule engine. Runs ALONGSIDE the per-flow
+        pipeline - the per-flow path still handles session-shaped attacks that a
+        window aggregate would miss.
+
+        Returns a list of confirmed campaign dicts (each a distinct volumetric
+        attack on one victim/protocol). Empty if the aggregate model isn't
+        trained yet, so live behaviour is unchanged until train_aggregate.py runs.
+        """
+        if not aggregate_detector.is_available():
+            return []
+        try:
+            protected = database.get_setting("protected_ip", "").strip()
+        except Exception:
+            protected = ""
+        victim_ips = [protected] if protected else None
+
+        df = flow_aggregator.aggregate_packets(
+            active_packets, window_sec=AGG_SUBWINDOW_SEC, victim_ips=victim_ips)
+        if df.empty:
+            return []
+        scoped = df[df["scope"] == "victim_proto"].copy()
+        if scoped.empty:
+            return []
+
+        det = aggregate_detector.score_records(scoped)
+        scoped["ml_anom"] = det["is_anomaly"]
+        scoped["score"] = det["score"]
+
+        # Group flagged sub-windows by (victim, protocol); confirm only those
+        # seen in >= AGG_CONFIRM_WINDOWS sub-windows.
+        groups = {}
+        for rec in scoped.to_dict("records"):
+            verdict = ddos_classifier.classify_flow(rec)
+            rule_anom = (verdict["attack_type"] not in ("Normal", "Unknown Anomaly")
+                         and verdict["confidence"] >= 0.4)
+            if not (rec["ml_anom"] or rule_anom):
+                continue
+            key = (rec["victim_ip"], rec["protocol"])
+            g = groups.setdefault(key, {"windows": 0, "peers": 0, "pkts": 0,
+                                        "verdicts": {}, "best_conf": 0.0,
+                                        "dst_port": rec.get("dst_port", 0)})
+            g["windows"] += 1
+            g["peers"] = max(g["peers"], int(rec.get("unique_peers", 0)))
+            g["pkts"] += int(rec.get("total_pkts", 0))
+            g["best_conf"] = max(g["best_conf"], float(verdict["confidence"]))
+            name = (verdict["attack_type"] if rule_anom else "Volumetric Flood")
+            g["verdicts"][name] = g["verdicts"].get(name, 0) + 1
+
+        campaigns = []
+        for (victim, proto), g in groups.items():
+            if g["windows"] < AGG_CONFIRM_WINDOWS or g["peers"] < AGG_MIN_SOURCES:
+                continue
+            attack_type = max(g["verdicts"].items(), key=lambda kv: kv[1])[0]
+            severity = "Critical" if (g["peers"] > 200 or g["pkts"] > 2000) else "High"
+            campaigns.append({
+                "id": f"agg-{victim}-{proto}",
+                "src_ip": f"{g['peers']} sources",
+                "dst_ip": victim,
+                "dst_port": int(g["dst_port"]),
+                "attack_type": attack_type,
+                "severity": severity,
+                "total_pkts": g["pkts"],
+                "num_sources": g["peers"],
+                "windows_flagged": g["windows"],
+                "confidence": round(g["best_conf"], 2),
+                "detector": "volumetric-aggregate",
+            })
+        if campaigns:
+            names = ", ".join(f"{c['attack_type']}({c['num_sources']} src)" for c in campaigns)
+            database.add_log("WARNING", f"Volumetric DDoS detected: {names}")
+        return campaigns
+
     def perform_inference(self):
         curr_time = time.time()
         window_start = curr_time - self.sliding_window_sec
@@ -535,6 +627,10 @@ class PacketCaptureManager:
                 "shap_explanation": shap_contrib
             })
 
+        # Volumetric-DDoS track: window-level aggregate model (catches spoofed
+        # floods the per-flow path cannot - see flow_aggregator/aggregate_detector).
+        volumetric_campaigns = self._detect_volumetric_ddos(active_packets)
+
         # Aggregate anomalies into campaigns (distributed attacks, port scans)
         # and apply cross-flow label refinements before persisting/reporting
         campaigns, refinements = ddos_classifier.aggregate_campaigns(campaign_inputs)
@@ -548,6 +644,13 @@ class PacketCaptureManager:
         for a in alerts:
             if a["prediction"] == 1:
                 attacks_count[a["attack_type"]] = attacks_count.get(a["attack_type"], 0) + 1
+
+        # Merge volumetric-DDoS campaigns into the reported campaign list and
+        # subtype chart. These are window-level (not per-flow) so they add to
+        # campaigns/attacks_count without inflating the per-flow attack_count.
+        for c in volumetric_campaigns:
+            campaigns.append(c)
+            attacks_count[c["attack_type"]] = attacks_count.get(c["attack_type"], 0) + 1
 
         # Batch insert predictions
         database.add_predictions_batch(db_predictions)

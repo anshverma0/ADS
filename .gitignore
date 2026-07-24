@@ -45,3 +45,4 @@ project/reports/
 research/results/
 *.sqlite
 
+project/models/aggregate/
