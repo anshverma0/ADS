@@ -271,8 +271,116 @@ export default function History() {
             </div>
             <div className="mt-3 pt-2 border-t border-cyber-border/40 text-[10px] text-cyber-green font-mono flex items-center justify-between">
               <span>STATUS: READY</span>
-              <span>AEGIS-IDS</span>
+              <span>NSED-AI</span>
             </div>
+          </div>
+        </div>
+
+        {/* Log & Telemetry Data File Download Section */}
+        <div className="mt-6 pt-5 border-t border-cyber-border/70">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 font-mono">
+            <div className="flex items-center space-x-2">
+              <Download className="w-5 h-5 text-cyber-cyan" />
+              <h3 className="text-sm font-bold text-white tracking-wider uppercase">
+                DOWNLOAD DATA LOG FILES & EXPORTS
+              </h3>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30">
+                8 FORMATS AVAILABLE
+              </span>
+            </div>
+            <p className="text-xs text-gray-400">
+              Download captured log files in standard text, spreadsheet, document, or SIEM format.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 font-mono text-xs">
+            {/* CSV Log */}
+            <a
+              href={getExportUrl('csv', { mode, search, prediction, protocol })}
+              download
+              className="flex flex-col items-center justify-center p-3 rounded-xl bg-cyber-dark/80 hover:bg-gray-800 border border-cyber-border hover:border-cyber-cyan/50 text-white font-bold transition duration-200 text-center group cursor-pointer"
+            >
+              <Download className="w-5 h-5 text-cyber-cyan mb-1.5 group-hover:scale-110 transition" />
+              <span className="text-xs font-bold text-white">CSV Log</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">Spreadsheet</span>
+            </a>
+
+            {/* TXT Log File */}
+            <a
+              href={getExportUrl('txt', { mode, search, prediction, protocol })}
+              download
+              className="flex flex-col items-center justify-center p-3 rounded-xl bg-cyber-dark/80 hover:bg-gray-800 border border-cyber-border hover:border-cyber-green/50 text-white font-bold transition duration-200 text-center group cursor-pointer"
+            >
+              <FileText className="w-5 h-5 text-cyber-green mb-1.5 group-hover:scale-110 transition" />
+              <span className="text-xs font-bold text-white">TXT Log</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">Plain Text</span>
+            </a>
+
+            {/* JSON Data */}
+            <a
+              href={getExportUrl('json', { mode, search, prediction, protocol })}
+              download
+              className="flex flex-col items-center justify-center p-3 rounded-xl bg-cyber-dark/80 hover:bg-gray-800 border border-cyber-border hover:border-cyber-blue/50 text-white font-bold transition duration-200 text-center group cursor-pointer"
+            >
+              <FileCode className="w-5 h-5 text-cyber-blue mb-1.5 group-hover:scale-110 transition" />
+              <span className="text-xs font-bold text-white">JSON Data</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">Structured</span>
+            </a>
+
+            {/* PDF Report */}
+            <a
+              href={getExportUrl('pdf', { mode, search, prediction, protocol })}
+              download
+              className="flex flex-col items-center justify-center p-3 rounded-xl bg-cyber-dark/80 hover:bg-gray-800 border border-cyber-border hover:border-cyber-red/50 text-white font-bold transition duration-200 text-center group cursor-pointer"
+            >
+              <FileText className="w-5 h-5 text-cyber-red mb-1.5 group-hover:scale-110 transition" />
+              <span className="text-xs font-bold text-white">PDF Digest</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">Report Doc</span>
+            </a>
+
+            {/* XML Log */}
+            <a
+              href={getExportUrl('xml', { mode, search, prediction, protocol })}
+              download
+              className="flex flex-col items-center justify-center p-3 rounded-xl bg-cyber-dark/80 hover:bg-gray-800 border border-cyber-border hover:border-purple-500/50 text-white font-bold transition duration-200 text-center group cursor-pointer"
+            >
+              <FileType className="w-5 h-5 text-purple-400 mb-1.5 group-hover:scale-110 transition" />
+              <span className="text-xs font-bold text-white">XML Log</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">Markup</span>
+            </a>
+
+            {/* CEF (SIEM) */}
+            <a
+              href={getExportUrl('cef', { mode, search, prediction, protocol })}
+              download
+              className="flex flex-col items-center justify-center p-3 rounded-xl bg-cyber-dark/80 hover:bg-gray-800 border border-cyber-border hover:border-amber-500/50 text-white font-bold transition duration-200 text-center group cursor-pointer"
+            >
+              <ShieldAlert className="w-5 h-5 text-amber-400 mb-1.5 group-hover:scale-110 transition" />
+              <span className="text-xs font-bold text-white">CEF SIEM</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">Splunk/ArcSight</span>
+            </a>
+
+            {/* Syslog */}
+            <a
+              href={getExportUrl('syslog', { mode, search, prediction, protocol })}
+              download
+              className="flex flex-col items-center justify-center p-3 rounded-xl bg-cyber-dark/80 hover:bg-gray-800 border border-cyber-border hover:border-cyan-500/50 text-white font-bold transition duration-200 text-center group cursor-pointer"
+            >
+              <Activity className="w-5 h-5 text-cyan-400 mb-1.5 group-hover:scale-110 transition" />
+              <span className="text-xs font-bold text-white">Syslog</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">RFC 5424</span>
+            </a>
+
+            {/* LEEF (QRadar) */}
+            <a
+              href={getExportUrl('leef', { mode, search, prediction, protocol })}
+              download
+              className="flex flex-col items-center justify-center p-3 rounded-xl bg-cyber-dark/80 hover:bg-gray-800 border border-cyber-border hover:border-emerald-500/50 text-white font-bold transition duration-200 text-center group cursor-pointer"
+            >
+              <Layers className="w-5 h-5 text-emerald-400 mb-1.5 group-hover:scale-110 transition" />
+              <span className="text-xs font-bold text-white">LEEF Log</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">IBM QRadar</span>
+            </a>
           </div>
         </div>
       </section>

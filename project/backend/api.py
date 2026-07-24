@@ -1264,3 +1264,158 @@ def get_system_logs(limit: int = 50):
         return JSONResponse(content=logs)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ── SIEM Compatible Log Exports (CEF, Syslog RFC 5424, LEEF) ────────────────
+@router.get("/export-cef")
+def export_cef(
+    mode: Optional[str] = None,
+    search: Optional[str] = None,
+    prediction: Optional[int] = None,
+    protocol: Optional[str] = None
+):
+    """Exports detection history in Common Event Format (CEF) for Splunk, ArcSight, QRadar, and Palo Alto SIEMs."""
+    try:
+        conn = database.get_db_connection()
+        query = "SELECT id, timestamp, mode, src_ip, dst_ip, protocol, dst_port, prediction, confidence, attack_type, if_score FROM history WHERE 1=1"
+        params = []
+        if search:
+            query += " AND (src_ip LIKE ? OR dst_ip LIKE ? OR attack_type LIKE ?)"
+            s_param = f"%{search}%"
+            params.extend([s_param, s_param, s_param])
+        if mode:
+            query += " AND mode = ?"
+            params.append(mode)
+        if prediction is not None:
+            query += " AND prediction = ?"
+            params.append(prediction)
+        if protocol:
+            query += " AND protocol = ?"
+            params.append(protocol)
+        query += " ORDER BY id DESC"
+        
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+        
+        cef_lines = []
+        for _, row in df.iterrows():
+            sev = "10" if row['prediction'] == 1 else "2"
+            act = "Alert" if row['prediction'] == 1 else "Allow"
+            atk = str(row['attack_type'] or 'Normal')
+            src = str(row['src_ip'] or '0.0.0.0')
+            dst = str(row['dst_ip'] or '0.0.0.0')
+            dpt = str(int(row['dst_port'])) if pd.notna(row['dst_port']) else '80'
+            proto = str(row['protocol'] or 'TCP')
+            conf = str(row['confidence'] or '0')
+            if_sc = str(row['if_score'] or '0.0')
+            
+            line = f"CEF:0|NSED AI|Anomaly Detection Engine|2.0|{atk}|{atk}|{sev}|src={src} dst={dst} dpt={dpt} proto={proto} act={act} cs1={if_sc} cs1Label=IFScore cs2={conf} cs2Label=ConfidencePct"
+            cef_lines.append(line)
+            
+        cef_data = "\n".join(cef_lines)
+        filename = f"nsed_siem_events_{mode.lower() if mode else 'all'}.cef"
+        response = StreamingResponse(iter([cef_data]), media_type="text/plain")
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"CEF Export Exception: {str(e)}")
+
+@router.get("/export-syslog")
+def export_syslog(
+    mode: Optional[str] = None,
+    search: Optional[str] = None,
+    prediction: Optional[int] = None,
+    protocol: Optional[str] = None
+):
+    """Exports detection history in RFC 5424 Syslog standard format for SIEM forwarders."""
+    try:
+        conn = database.get_db_connection()
+        query = "SELECT id, timestamp, mode, src_ip, dst_ip, protocol, dst_port, prediction, confidence, attack_type FROM history WHERE 1=1"
+        params = []
+        if search:
+            query += " AND (src_ip LIKE ? OR dst_ip LIKE ? OR attack_type LIKE ?)"
+            s_param = f"%{search}%"
+            params.extend([s_param, s_param, s_param])
+        if mode:
+            query += " AND mode = ?"
+            params.append(mode)
+        if prediction is not None:
+            query += " AND prediction = ?"
+            params.append(prediction)
+        if protocol:
+            query += " AND protocol = ?"
+            params.append(protocol)
+        query += " ORDER BY id DESC"
+        
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+        
+        syslog_lines = []
+        for _, row in df.iterrows():
+            pri = "<132>" if row['prediction'] == 1 else "<134>"
+            ts = str(row['timestamp'])
+            atk = str(row['attack_type'] or 'Normal')
+            src = str(row['src_ip'] or '0.0.0.0')
+            dst = str(row['dst_ip'] or '0.0.0.0')
+            proto = str(row['protocol'] or 'TCP')
+            
+            line = f"{pri}1 {ts} nsed-ai-sensor NSED_AI {row['id']} MSGID [securityEvent@41058 attackType=\"{atk}\" src=\"{src}\" dst=\"{dst}\" proto=\"{proto}\"] Intrusion Detection Event: {atk} flagged from {src}"
+            syslog_lines.append(line)
+            
+        syslog_data = "\n".join(syslog_lines)
+        filename = f"nsed_syslog_events_{mode.lower() if mode else 'all'}.syslog"
+        response = StreamingResponse(iter([syslog_data]), media_type="text/plain")
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Syslog Export Exception: {str(e)}")
+
+@router.get("/export-leef")
+def export_leef(
+    mode: Optional[str] = None,
+    search: Optional[str] = None,
+    prediction: Optional[int] = None,
+    protocol: Optional[str] = None
+):
+    """Exports detection history in IBM QRadar LEEF (Log Event Extended Format)."""
+    try:
+        conn = database.get_db_connection()
+        query = "SELECT id, timestamp, mode, src_ip, dst_ip, protocol, dst_port, prediction, confidence, attack_type FROM history WHERE 1=1"
+        params = []
+        if search:
+            query += " AND (src_ip LIKE ? OR dst_ip LIKE ? OR attack_type LIKE ?)"
+            s_param = f"%{search}%"
+            params.extend([s_param, s_param, s_param])
+        if mode:
+            query += " AND mode = ?"
+            params.append(mode)
+        if prediction is not None:
+            query += " AND prediction = ?"
+            params.append(prediction)
+        if protocol:
+            query += " AND protocol = ?"
+            params.append(protocol)
+        query += " ORDER BY id DESC"
+        
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+        
+        leef_lines = []
+        for _, row in df.iterrows():
+            sev = "8" if row['prediction'] == 1 else "2"
+            ts = str(row['timestamp'])
+            atk = str(row['attack_type'] or 'Normal')
+            src = str(row['src_ip'] or '0.0.0.0')
+            dst = str(row['dst_ip'] or '0.0.0.0')
+            dpt = str(int(row['dst_port'])) if pd.notna(row['dst_port']) else '80'
+            proto = str(row['protocol'] or 'TCP')
+            
+            line = f"LEEF:2.0|NSED AI|Anomaly Detector|2.0|{atk}|\tdevTime={ts}\tsrc={src}\tdst={dst}\tdstPort={dpt}\tproto={proto}\tsev={sev}\tcat={atk}"
+            leef_lines.append(line)
+            
+        leef_data = "\n".join(leef_lines)
+        filename = f"nsed_leef_events_{mode.lower() if mode else 'all'}.leef"
+        response = StreamingResponse(iter([leef_data]), media_type="text/plain")
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LEEF Export Exception: {str(e)}")

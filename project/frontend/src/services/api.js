@@ -157,6 +157,9 @@ export function getExportUrl(type = 'json', { mode, search, prediction, protocol
   else if (type === 'pdf') endpoint = '/api/download-pdf';
   else if (type === 'xml') endpoint = '/api/export-xml';
   else if (type === 'txt') endpoint = '/api/export-txt';
+  else if (type === 'cef') endpoint = '/api/export-cef';
+  else if (type === 'syslog') endpoint = '/api/export-syslog';
+  else if (type === 'leef') endpoint = '/api/export-leef';
   
   const query = params.toString();
   return `${API_BASE}${endpoint}${query ? `?${query}` : ''}`;

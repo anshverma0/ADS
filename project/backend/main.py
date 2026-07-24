@@ -24,8 +24,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
+import traceback
+from datetime import datetime
+
 # Include the API routes
 app.include_router(api.router)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    error_msg = str(exc)
+    database.add_log("ERROR", f"Unhandled Exception on {request.url.path}: {error_msg}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "error_type": exc.__class__.__name__,
+            "detail": error_msg,
+            "path": str(request.url.path),
+            "timestamp": datetime.now().isoformat()
+        }
+    )
 
 # Mount the frontend's production static build folder if it exists
 frontend_dist_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))

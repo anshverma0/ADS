@@ -52,7 +52,7 @@ export default function SentinelLayout({ active, onNavigate, modelHealth, onSear
       {/* SideNavBar */}
       <aside className="fixed left-0 top-0 h-full w-64 border-r border-white/10 bg-surface/70 backdrop-blur-xl flex flex-col py-6 z-[60]">
         <div className="px-6 mb-6">
-          <h1 className="font-geist text-[28px] leading-8 font-bold text-primary-container tracking-tighter">Sentinel AI</h1>
+          <h1 className="font-geist text-[28px] leading-8 font-bold text-primary-container tracking-tighter">NSED AI</h1>
           <p className="text-label-caps text-on-surface-variant uppercase mt-1 tracking-widest">Vigilance System</p>
         </div>
         <nav className="flex-1 flex flex-col gap-1 px-3 overflow-y-auto">
@@ -80,7 +80,7 @@ export default function SentinelLayout({ active, onNavigate, modelHealth, onSear
           </button>
           <div className="mt-3 flex items-center gap-3 px-2">
             <div className="w-8 h-8 rounded-full bg-primary-container/90 border border-primary/20 flex items-center justify-center text-black font-bold text-xs">
-              SA
+              NA
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-white">SOC Analyst</span>
