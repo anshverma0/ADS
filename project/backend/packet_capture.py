@@ -645,12 +645,40 @@ class PacketCaptureManager:
             if a["prediction"] == 1:
                 attacks_count[a["attack_type"]] = attacks_count.get(a["attack_type"], 0) + 1
 
-        # Merge volumetric-DDoS campaigns into the reported campaign list and
-        # subtype chart. These are window-level (not per-flow) so they add to
-        # campaigns/attacks_count without inflating the per-flow attack_count.
+        # Merge volumetric-DDoS campaigns into the reported campaign list, the
+        # subtype chart, AND the alert feed. These are window-level (not per-flow):
+        # a spoofed flood is thousands of 1-packet flows that each look Normal to
+        # the per-flow path, so without surfacing the campaign here the attack is
+        # invisible in the live alert console.
         for c in volumetric_campaigns:
             campaigns.append(c)
             attacks_count[c["attack_type"]] = attacks_count.get(c["attack_type"], 0) + 1
+            attack_count += 1
+            alerts.append({
+                "id": c["id"],
+                "timestamp": datetime_string(curr_time),
+                "src_ip": c["src_ip"],            # e.g. "1104 sources"
+                "dst_ip": c["dst_ip"],
+                "protocol": "TCP" if "SYN" in c["attack_type"] or "ACK" in c["attack_type"]
+                            or "HTTP" in c["attack_type"] else "-",
+                "dst_port": c["dst_port"],
+                "prediction": 1,
+                "confidence": round(c["confidence"] * 100, 2),
+                "attack_type": c["attack_type"],
+                "severity": c["severity"],
+                "if_score": 0.0,
+                "ensemble_score": c["confidence"],
+                "shap_explanation": [],
+                "explanation_text": (
+                    f"Volumetric DDoS: {c['num_sources']} distinct sources hit "
+                    f"{c['dst_ip']} across {c['windows_flagged']} windows "
+                    f"({c['total_pkts']} pkts). Detected by the window-level "
+                    f"aggregate model - individual flows appear benign."),
+                "flow_details": {"num_sources": c["num_sources"],
+                                 "windows_flagged": c["windows_flagged"],
+                                 "total_pkts": c["total_pkts"]},
+                "detector": "volumetric-aggregate",
+            })
 
         # Batch insert predictions
         database.add_predictions_batch(db_predictions)
