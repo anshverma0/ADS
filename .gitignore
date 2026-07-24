@@ -30,6 +30,13 @@ wireshark_dataset/
 *.pcap
 *.pcapng
 
+# Derived flow CSVs + evaluation reports (regenerate with flows_to_cicds.py /
+# eval_captured_pcap.py; the ground-truth attack_timeline_*.csv files they are
+# labelled against live in data/attack_timelines/ and ARE tracked)
+data/captured_cicds/
+project/models/captured_*.json
+project/models/capture3_eval.json
+
 # Runtime state (created automatically by the apps)
 temp_uploads/
 project/logs/
