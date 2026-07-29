@@ -41,12 +41,12 @@ The system's detection capabilities have been rigorously evaluated on both **sta
 | :--- | :--- | :--- | :--- | :--- |
 | **CICDDoS2019 Benchmark** | Stage 1 Isolation Forest + Rule Engine | **88.1% Accuracy** (0.8807) | 88.1% | Low (Batch) |
 | **CTU-13 Dataset** | Stage 1 Isolation Forest | **65.6% Accuracy** | 55.5% | 24.3% |
-| **Live Network Capture (Per-Flow Base)** | Single 5-Tuple Flow Model | **49.7% Balanced Acc.** (Coin Flip)* | ~0.05% | 31.7% |
-| **Live Network Capture (Redesigned)** | **Window-Level Aggregate Track** | **95.0% Balanced Acc.** (0.946) | **100.0%** | **0.0%** |
+| **Live Network (Initial Baseline)** | Legacy Single 5-Tuple Flow Model | **49.7% Balanced Acc.** *(Initial baseline - coin flip)* | ~0.05% | 31.7% |
+| **Live Network (Current System)** | **Redesigned Window Aggregate Track** | **95.0% Balanced Acc.** (0.946) | **100.0%** | **0.0%** |
 
-> 📌 **Key Finding on Live Field Evaluation:**
-> On pre-processed benchmark datasets (like CICDDoS2019), static per-flow detectors achieve **88.1% accuracy**. However, on **live network traffic**, spoofed volumetric attacks break single 5-tuple flow assumptions by producing short 1-packet flows, causing baseline per-flow models to drop to **49.7% balanced accuracy**. 
-> Aegis-IDS solves this by introducing a **Window-Level Aggregate Detector** ($\text{5-second sub-windows}$ with source cardinality tracking), restoring live detection performance to **95.0% balanced accuracy**, **100% attack recall**, and **0.0% false alarms** on live traffic.
+> 📌 **Key Finding & Evolution:**
+> * **Initial Baseline:** The legacy per-flow detector scored **88.1% accuracy** on static pre-processed benchmarks (CICDDoS2019), but collapsed to **49.7% balanced accuracy** when tested on live network traffic due to spoofed 1-packet flows hiding volume metrics.
+> * **Current Production System:** To fix this limitation, Aegis-IDS introduced the **Window-Level Aggregate Detector** (aggregating 5-second sub-windows with source cardinality tracking). This upgraded system currently achieves **95.0% balanced accuracy**, **100% attack recall**, and **0.0% false alarms** on live network traffic.
 
 ---
 
