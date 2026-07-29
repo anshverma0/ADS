@@ -1,219 +1,292 @@
-# Network Anomaly Detection — CTU-13 Botnet Dataset
+# Aegis-IDS: Unsupervised Network Anomaly & DDoS Detection System
 
-> **Unsupervised anomaly detection** on real-world botnet traffic using **Isolation Forest**.
-> Validated on the CTU-13 dataset (38,898 attack flows + 53,314 normal flows).
-> Includes a dataset comparison pipeline, explainability walkthrough, and an optional AI agent layer.
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Node.js](https://img.shields.io/badge/node.js-18%2B-green.svg)](https://nodejs.org/)
+[![Framework](https://img.shields.io/badge/backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
+[![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-61DAFB.svg)](https://vitejs.dev/)
+[![ML Pipeline](https://img.shields.io/badge/ML-Isolation%20Forest%20%2B%20Autoencoder-orange.svg)](https://scikit-learn.org/)
+
+**Aegis-IDS** is an enterprise-grade, real-time Network Intrusion Detection System (NIDS) and Security Operations Center (SOC) dashboard. It combines **unsupervised machine learning** (Isolation Forest + Autoencoder ensemble) with a **rule-based DDoS subtype classifier** and a **window-level aggregate volumetric detector** to detect zero-day anomalies, stealthy botnet C&C traffic, and distributed volumetric flood attacks without relying solely on static signatures.
 
 ---
 
-## Quick Start
+## 📋 Table of Contents
 
-### 1. Clone and install
+- [Key Features](#-key-features)
+- [Architecture & Detection Pipeline](#-architecture--detection-pipeline)
+- [Prerequisites](#-prerequisites)
+- [Quick Start Guide](#-quick-start-guide)
+  - [1. Clone Repository & Setup Python Environment](#1-clone-repository--setup-python-environment)
+  - [2. Launch Full Web Application (Recommended)](#2-launch-full-web-application-recommended)
+  - [3. Accessing the User Interfaces & API](#3-accessing-the-user-interfaces--api)
+  - [4. Alternative Execution Modes](#4-alternative-execution-modes)
+- [Attack Classification Reference](#-attack-classification-reference)
+  - [Volumetric Attacks](#volumetric-attacks)
+  - [Unknown Anomalies](#unknown-anomalies)
+  - [Targeted DDoS & Intrusion Subtypes](#targeted-ddos--intrusion-subtypes)
+- [SecureAI Agent (CVE & MITRE ATT&CK Mapping)](#-secureai-agent-cve--mitre-attck-mapping)
+- [Datasets & Research Papers](#-datasets--research-papers)
+- [Project Directory Structure](#-project-directory-structure)
+- [API Documentation](#-api-documentation)
+
+---
+
+## ⚡ Key Features
+
+- **Unsupervised Ensemble Machine Learning:** Uses an Isolation Forest and Autoencoder trained on normal traffic patterns to spot zero-day anomalies without requiring prior labeled attack signatures.
+- **Two-Stage Detection Pipeline:**
+  - **Stage 1 (Anomaly Detection):** Continuous flow statistical scoring.
+  - **Stage 2 (Threat Subtype Classification):** Rule-based engine determining specific attack types.
+- **Aggregate Volumetric Track:** Window-level multi-source aggregation (5-second sub-windows) targeting distributed IP spoofing campaigns that bypass single-flow detectors.
+- **Real-Time Live Capture & PCAP Ingestion:** Sniffs live traffic via Scapy/PyShark or ingests `.pcap` files and CSV logs.
+- **Modern SOC Dashboard:** React frontend powered by Vite featuring live traffic feeds, anomaly charts, campaign aggregations, flow exploration, and system logs.
+- **SecureAI Agent Layer:** GPT-4o / Ollama AI advisor for automated incident reports, CVE lookups, and MITRE ATT&CK tactic/technique mapping.
+
+---
+
+## 🏗 Architecture & Detection Pipeline
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   Network Traffic / Ingestion Source                   │
+│         (Live Network Interface / Uploaded PCAP / CSV Dataset)         │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│               Feature Extractor (Flow Generator & Aggregator)           │
+│        Extracts 10 core features: pps, bps, TCP flags, duration...     │
+└───────────────────┬────────────────────────────────┬───────────────────┘
+                    │                                │
+                    ▼                                ▼
+┌──────────────────────────────────────┐  ┌──────────────────────────────┐
+│       Stage 1: Unsupervised ML       │  │ Stage 1b: Window Aggregator  │
+│ (Isolation Forest + Autoencoder)     │  │ (5s Window Multi-Source)     │
+└───────────────────┬──────────────────┘  └──────────────┬───────────────┘
+                    │                                    │
+                    ▼                                    ▼
+┌──────────────────────────────────────┐  ┌──────────────────────────────┐
+│      Stage 2: DDoS Classifier        │  │ Aggregate Volumetric Model   │
+│ (Rule Engine & Subtype Fingerprint)  │  │ (Catches Distributed Floods) │
+└───────────────────┬──────────────────┘  └──────────────┬───────────────┘
+                    │                                    │
+                    └───────────────────┬────────────────┘
+                                        │
+                                        ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                 Aegis SOC Dashboard & FastAPI Backend                  │
+│       (Live Alerts, Incident Reports, History, SecureAI Advisor)       │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔧 Prerequisites
+
+Before installing, ensure you have the following installed on your machine:
+
+1. **Python:** Version `3.10` or higher
+2. **Node.js:** Version `18.0` or higher (includes `npm`)
+3. **Packet Capture Driver (Optional for Live Sniffing):**
+   - **Windows:** [Npcap](https://npcap.com/) (select "Install Npcap in WinPcap API-compatible Mode")
+   - **Linux/macOS:** `libpcap-dev` (`sudo apt install libpcap-dev` or `brew install libpcap`)
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Clone Repository & Setup Python Environment
 
 ```bash
+# Clone the repository
 git clone https://github.com/akrishnash/anamoly_detection.git
 cd anamoly_detection
+
+# Create and activate a virtual environment (recommended)
+python -m venv venv
+
+# On Windows (PowerShell):
+.\venv\Scripts\Activate.ps1
+# On Linux/macOS:
+source venv/bin/activate
+
+# Install Python dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Download the CTU-13 dataset
+---
 
-Place both CSVs in `data/ctu13/`:
+### 2. Launch Full Web Application (Recommended)
 
-```
-data/ctu13/
-├── CTU13_Attack_Traffic.csv    # 38,898 botnet flows
-└── CTU13_Normal_Traffic.csv    # 53,314 benign campus flows
-```
-
-Download source: [imfaisalmalik/CTU13-CSV-Dataset](https://github.com/imfaisalmalik/CTU13-CSV-Dataset)
-
-### 3. Run the scripts
+To run the complete system (FastAPI backend + Vite React frontend + Orchestrator), simply run:
 
 ```bash
-# Main detector — 10-feature Isolation Forest on CTU-13 (6K rows each)
-python research/run_ctu13.py
-
-# All-features version — all CICFlowMeter columns + log1p transform
-python research/run_ctu13_v2.py
-
-# Attack vs Normal comparison — 20K rows each, Cohen's d, ROC, PR, threshold sweep
-python research/compare_datasets.py
-
-# Isolation Forest explainability walkthrough (tiny 13-point dataset)
-python research/explain_isolation_forest.py
-
-# SecureAI Agent — GPT-4o tool-calling loop over the detector (requires OpenAI key)
-export OPENAI_API_KEY=sk-...
-python research/agent/agent.py
-
-# Full IDS web app (FastAPI backend + React frontend)
 python run_all.py
 ```
 
-All graphs are saved to the `docs/graphs/` folder.
+#### What `run_all.py` automatically handles:
+1. Checks and installs React dependencies (`npm install` inside `project/frontend`).
+2. Scans for free local ports (defaults to Backend: `8000`, Frontend: `5173`).
+3. Boots the FastAPI backend server and preloads the machine learning models.
+4. Waits for the backend to be healthy before starting the Vite frontend.
+5. Automatically opens your default web browser to the dashboard URL.
 
 ---
 
-## Results
+### 3. Accessing the User Interfaces & API
 
-### run_ctu13.py  (6,000 flows per class, 10 features)
+Once `run_all.py` completes startup, you can access the application at:
 
-| Class | Precision | Recall | F1 |
-|---|---|---|---|
-| Normal | 0.630 | 0.757 | 0.687 |
-| Attack | **0.695** | **0.555** | **0.617** |
-| Overall accuracy | | | **0.656** |
+| Interface | URL | Description |
+| :--- | :--- | :--- |
+| **Aegis SOC Dashboard (Frontend)** | **`http://127.0.0.1:5173`** | Complete graphical dashboard (Live Monitoring, Sentinel, Flow Explorer, Incident History). |
+| **FastAPI Swagger API Docs** | **`http://127.0.0.1:8000/docs`** | Interactive OpenAPI specification to test endpoints directly. |
+| **FastAPI ReDoc API Docs** | **`http://127.0.0.1:8000/redoc`** | Alternative clean API documentation interface. |
 
+---
+
+### 4. Alternative Execution Modes
+
+#### A. Standalone Lightweight Dashboard
+If you prefer a lightweight single-process dashboard without React build steps:
+```bash
+python simple_dashboard/server.py
 ```
-Confusion Matrix:
-  TN = 4,541   FP = 1,459
-  FN = 2,671   TP = 3,329
+Access at `http://127.0.0.1:5000`.
+
+#### B. Ingest Attack Logs / PCAP Files via CLI
+To process a local dataset file or attack log directly:
+```bash
+python ingest_attack_logs.py
 ```
 
-### compare_datasets.py  (20,000 flows per class, same 10 features)
+#### C. Run Research & Benchmark Experiments
+```bash
+# Isolation Forest on CTU-13 dataset
+python research/run_ctu13.py
 
-| Metric | Value |
-|---|---|
-| Attack Precision | 0.637 |
-| Attack Recall | 0.509 |
-| ROC-AUC | **0.706** |
-| Avg Precision | 0.612 |
+# Feature importance & Dataset comparison
+python research/compare_datasets.py
 
----
-
-## Why Attack Traffic Has Low Byte Rates (and Still Signals Attack)
-
-CTU-13 is predominantly **botnet C&C traffic** — deliberately stealthy and low-volume.
-The median byte rate for attack flows is near zero. This is not "nothing happening":
-it is suspiciously *too quiet* for real user traffic.
-
-The actual discriminating signals (measured by Cohen's d effect size):
-
-| Feature | Cohen's d | Direction | Meaning |
-|---|---|---|---|
-| SYN Flag Count | **+0.86** | Attack > Normal | Constant connection attempts = port scans / C&C setup |
-| Packet Rate | **+0.63** | Attack > Normal | Bimodal: near-zero beacons AND DDoS burst spikes |
-| Fwd Pkts/s | **+0.63** | Attack > Normal | High forward rate in scanning phases |
-| FIN Flag Count | **+0.31** | Attack > Normal | Many abruptly closed connections (scan and move on) |
-| Pkt Len Mean | **-0.19** | Normal > Attack | Normal has larger packets (HTTP content, file data) |
-| Bwd Bytes | **-0.02** | Normal > Attack | C&C victims reply with near-empty ACKs |
-
-Isolation Forest detects anomalies in the **joint feature space** — a flow with near-zero bytes
-+ elevated SYN + specific timing occupies an isolated region that a random tree cuts off
-very quickly, earning a low (anomalous) score.
+# Isolation Forest visual decision-tree walkthrough
+python research/explain_isolation_forest.py
+```
 
 ---
 
-## File Structure
+## 🔍 Attack Classification Reference
+
+The Stage 2 Classifier ([ddos_classifier.py](file:///c:/Users/ADRIN/ADS/project/backend/ddos_classifier.py)) assigns detailed threat signatures to anomalous flows:
+
+### Volumetric Attacks
+* **Volumetric Flood (Per-Flow):** Triggered when sustained flow packet rate exceeds **1,000 pkts/s** or byte rate exceeds **5 MB/s** without matching specific application protocol rules.
+* **Volumetric DDoS (Aggregate):** Triggered when a window-level aggregate detects $\ge 10$ distinct source IPs bombarding a single target host simultaneously.
+
+### Unknown Anomalies
+* **Unknown Anomaly:** Triggered when Stage 1 ML models flag a flow's statistical behavior as highly anomalous (low Isolation Forest score / high Autoencoder reconstruction error), but the traffic pattern does not match any static attack signature rule.
+
+### Targeted DDoS & Intrusion Subtypes
+* **SYN Flood:** TCP traffic with $\ge 50\%$ SYN flags and minimal/no ACK replies (half-open connection flood).
+* **UDP Flood:** Unidirectional high-rate UDP traffic ($>50\text{ pkts/s}$ or $>100$ packets with no response).
+* **ICMP Flood:** Sustained high-frequency ICMP ping floods ($>20\text{ pkts/s}$).
+* **Amplification Attack:** Abused UDP reflector services (DNS, NTP, SNMP, Memcached, SSDP) generating oversized responses ($>400\text{ bytes}$).
+* **Slowloris (Slow HTTP):** Low-rate ($<2\text{ pkts/s}$), small-packet connections held open for extended durations ($>30\text{ seconds}$).
+* **HTTP Flood:** Established web connections (ports 80/443) receiving request rates $>20\text{ pkts/s}$.
+* **Brute Force:** High frequency of small packets targeting auth ports (SSH: 22, FTP: 21, RDP: 3389, SMB: 445).
+* **Data Exfiltration:** Large one-way outbound data transfers exceeding $1\text{ MB}$.
+
+---
+
+## 🤖 SecureAI Agent (CVE & MITRE ATT&CK Mapping)
+
+The project includes an AI Security Analyst agent ([research/agent/agent.py](file:///c:/Users/ADRIN/ADS/research/agent/agent.py)) capable of enriching detected anomalies with threat intelligence.
+
+### Configuration
+1. **Cloud Mode (OpenAI GPT-4o):**
+   ```bash
+   export OPENAI_API_KEY="your-api-key-here"
+   python research/agent/agent.py
+   ```
+2. **Local Air-Gapped Mode (Ollama / Llama 3):**
+   Edit `agent.py` to point to your local Ollama instance:
+   ```python
+   client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+   MODEL = "llama3.1"
+   ```
+
+---
+
+## 📊 Datasets & Research Papers
+
+The system is tested and benchmarked against standard NIDS datasets:
+- **CTU-13 Botnet Dataset:** 38,898 attack flows & 53,314 normal flows across 13 botnet scenarios.
+- **CIC-DDoS2019 Dataset:** Parquet flow captures used for volumetric flood benchmarking.
+- **NSL-KDD Dataset:** Classical benchmark evaluation.
+
+Research documentation and evaluation reports are available in the [`docs/`](file:///c:/Users/ADRIN/ADS/docs) directory:
+- [TECHNICAL_REPORT.md](file:///c:/Users/ADRIN/ADS/docs/TECHNICAL_REPORT.md): Field evaluation, benchmark failure analysis, and aggregate detector architecture.
+- [leakage_report.md](file:///c:/Users/ADRIN/ADS/docs/leakage_report.md): Analysis of data leakage risks in standard NIDS machine learning benchmarks.
+
+---
+
+## 📁 Project Directory Structure
 
 ```
 anamoly_detection/
-├── project/              # Aegis-IDS production FastAPI backend + React frontend
-│   ├── backend/          # Two-stage unsupervised detector + DDoS rule engine
-│   ├── frontend/         # React dashboard (Vite)
-│   └── models/           # Trained model assets (scaler, IF, autoencoder, meta)
-├── research/             # Experimental, benchmarking, and explanation scripts
-│   ├── agent/            # SecureAI GPT-4o advisor agent (agent.py, cve_db.py)
-│   ├── results/          # Generated metrics CSVs (gitignored, re-created by scripts)
-│   ├── compare_algorithms.py
-│   ├── compare_datasets.py
-│   ├── explain_isolation_forest.py
-│   ├── run_ctu13.py
-│   ├── run_ctu13_v2.py
-│   ├── run_rigorous_hybrid.py
-│   └── run_nsl_kdd.py
-├── data/                 # Datasets (large sets are gitignored — download manually)
-│   ├── ctu13/            # CTU-13 CSV flow datasets (download, see Quick Start)
-│   ├── CICDDos2019/      # CIC-DDoS2019 parquet files (download manually)
-│   └── nsl_kdd/          # NSL-KDD Train and Test text datasets
-├── docs/                 # Academic papers, research notes, and output figures
-│   ├── paper.md
-│   ├── hybrid_system_paper.md
-│   ├── leakage_report.md
-│   ├── RESEARCH.md
-│   ├── PROGRESS.md
-│   └── graphs/           # Model output charts and visualization PNGs
-├── simple_dashboard/     # Standalone lightweight dashboard (server.py + static/)
-├── run_all.py            # One-command launcher for the project/ web app
-├── requirements.txt      # Project Python requirements
-└── README.md             # This file
-
-# Created at runtime (gitignored): temp_uploads/, project/logs/,
-# project/datasets/, project/reports/, research/results/
+├── run_all.py                # 🚀 One-command system launcher (Backend + Frontend)
+├── ingest_attack_logs.py     # Log ingestion CLI script
+├── requirements.txt          # Root Python dependencies
+├── README.md                 # Project documentation
+│
+├── project/                  # Aegis Production Application
+│   ├── backend/              # FastAPI Server & ML Detection Engine
+│   │   ├── main.py           # FastAPI entrypoint
+│   │   ├── api.py            # API routes and endpoints
+│   │   ├── anomaly_detector.py # Isolation Forest & Autoencoder ensemble
+│   │   ├── ddos_classifier.py  # Stage 2 DDoS Rule Engine
+│   │   ├── flow_aggregator.py  # Sub-window traffic aggregation
+│   │   ├── packet_capture.py # Live Scapy network interface sniffer
+│   │   └── database.py       # SQLite incident logging store
+│   │
+│   ├── frontend/             # React (Vite) Security Operations Center
+│   │   ├── src/pages/        # Dashboard, Live Detection, Sentinel, History
+│   │   ├── package.json      # Node dependencies
+│   │   └── vite.config.js    # Vite configuration & proxy settings
+│   │
+│   └── models/               # Trained ML models & scalers (.pkl, .pt)
+│
+├── research/                 # Model Training, Benchmark & AI Agent Scripts
+│   ├── agent/                # SecureAI Agent (GPT-4o / Ollama)
+│   ├── run_ctu13.py          # CTU-13 benchmark runner
+│   ├── compare_datasets.py   # Statistical feature significance tests
+│   └── explain_isolation_forest.py # IF decision tree visualizer
+│
+├── docs/                     # Technical Reports, Papers & Graphs
+└── data/                     # Datasets (CTU-13, CIC-DDoS2019, NSL-KDD)
 ```
 
 ---
 
-## Architecture
+## 🔌 API Documentation
 
-```
-CTU-13 CSV (attack + normal)
-          │
-          ▼
-    load_and_merge()           sample N rows per class, assign true_label
-          │
-          ▼
-    featurise()                map CICFlowMeter columns → 10 feature cols
-          │
-          ▼
-  StandardScaler + IsolationForest (n_estimators=200, contamination=0.40)
-          │
-          ├── score_samples()  → continuous IF score (lower = more anomalous)
-          └── fit_predict()    → binary flag (-1 anomaly / +1 normal)
-                    │
-                    ▼
-            classify()         heuristic rules (z-score per feature)
-                    │
-                    ▼
-          Console report + 4-panel PNG  (saved to graphs/)
-```
+When the backend is running at `http://127.0.0.1:8000`, the following core REST endpoints are available:
+
+- **`GET /api/online/status`** — System status and active network interface.
+- **`POST /api/online/start`** — Start real-time live network packet sniffing.
+- **`POST /api/online/stop`** — Stop real-time live network sniffing.
+- **`GET /api/logs`** — Retrieve historical anomaly logs and threat verdicts.
+- **`POST /api/detect`** — Submit flow records or PCAP files for on-demand analysis.
+- **`GET /api/stats`** — Overall threat statistics, attack distribution, and protocol breakdown.
 
 ---
 
-## How Isolation Forest Works
+## 📄 License & Attribution
 
-1. Builds `n_estimators` random trees, each grown on a random feature subset.
-2. At each node it picks a random feature and a random split value.
-3. **Anomalous points are isolated near the root** — they need fewer splits.
-4. The anomaly score = average path length across all trees (normalised).
-5. Points with short average path length get a low (negative) score → flagged.
+Distributed under the MIT License. See `LICENSE` for more information.
 
-The `explain_isolation_forest.py` script walks through this on a 13-point toy dataset
-with full visualisation of every tree split.
+Dataset & Data Source Citations:
+- **CTU-13 Dataset:** Stratosphere IPS Project, CTU University Prague.
+- **CIC-DDoS2019 Dataset:** Canadian Institute for Cybersecurity (UNB).
+- **NSL-KDD Dataset:** University of New Brunswick (UNB) / Tavallaee et al. (improved version of KDD Cup 99).
+- **Live Captured Network Data:** Real-time live network traffic captured via Wireshark / TShark / Scapy packet engine.
 
----
-
-## SecureAI Agent (Optional)
-
-`agent.py` wraps the detector in a GPT-4o tool-calling loop that:
-
-- Calls `analyze_traffic()` to run the IF detector and return anomaly episodes
-- Calls `lookup_cve()` to enrich each finding with CVEs and MITRE ATT&CK techniques
-- Returns a structured analyst-grade threat report
-
-Requires `OPENAI_API_KEY`. The agent is **advisory only** — it never takes automated
-action. Every tool call is logged. Human review is always the final step.
-
-**Local / air-gapped mode** — swap two lines in `agent.py`:
-
-```python
-# Cloud
-client = OpenAI()
-MODEL  = "gpt-4o"
-
-# Local via Ollama (no internet required)
-client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
-MODEL  = "llama3.1"
-```
-
----
-
-## Dataset
-
-**CTU-13** — Sebastian Garcia, Martin Grill, Jan Stiborek, Alejandro Zunino.
-*"An empirical comparison of botnet detection methods"*, Computers & Security, 2014.
-[https://www.stratosphereips.org/datasets-ctu13](https://www.stratosphereips.org/datasets-ctu13)
-
-13 scenarios of real botnet traffic (Neris, Rbot, Menti, Sogou, Murlo, NSIS.ay botnets)
-captured on the CTU university network, mixed with normal campus background traffic.
